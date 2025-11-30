@@ -2,9 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from PIL import Image
-import cv2
-import torch
-from ultralytics import YOLO
 import time
 st.set_page_config(page_title="SVAMITVA AI Feature Extraction", layout="wide", page_icon="🛰️")
 if 'processed' not in st.session_state:
@@ -18,12 +15,14 @@ if 'annotated_image' not in st.session_state:
 @st.cache_resource
 def load_model():
     try:
+        import cv2
+        from ultralytics import YOLO
         model = YOLO('yolov8n.pt')
-        return model
-    except:
-        st.error("Failed to load YOLO model. Installing required packages...")
-        return None
-def detect_objects(image, model, confidence):
+        return model, cv2
+    except Exception as e:
+        st.error(f"Model loading failed: {str(e)}")
+        return None, None
+def detect_objects(image, model, cv2, confidence):
     img_array = np.array(image)
     if len(img_array.shape) == 2:
         img_array = cv2.cvtColor(img_array, cv2.COLOR_GRAY2BGR)
@@ -92,16 +91,16 @@ with tab1:
         with col2:
             use_gpu = st.checkbox("Use GPU", value=False)
         if st.button("🚀 Detect Objects", type="primary", use_container_width=True):
-            model = load_model()
-            if model is None:
-                st.error("Model loading failed. Please check YOLO installation.")
+            model, cv2 = load_model()
+            if model is None or cv2 is None:
+                st.error("Model loading failed. Please check logs.")
             else:
                 with st.spinner("🔄 Detecting objects..."):
                     progress_bar = st.progress(0)
                     for i in range(100):
                         time.sleep(0.01)
                         progress_bar.progress(i + 1)
-                    annotated_img, results = detect_objects(image, model, confidence_threshold)
+                    annotated_img, results = detect_objects(image, model, cv2, confidence_threshold)
                     st.session_state.annotated_image = annotated_img
                     st.session_state.results = results
                     st.session_state.processed = True
