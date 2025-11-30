@@ -1,13 +1,13 @@
 # SVAMITVA AI Feature Extraction System
 
-Live Demo:
+AI-Powered Object Detection for Drone Orthophotos - Smart India Hackathon 2024
 
-Features:
-Building Footprint Detection
-Road Network Extraction
-Water Body Identification
-Parcel Boundary Demarcation
-Land Use/Land Cover Classification
-Vegetation Index (NDVI) Computation
-Interactive Visualization
-Multiple Export Formats (GeoJSON, CSV, KML, PDF)
+## Features
+
+- Real-time object detection using YOLOv8
+- Support for multiple image formats (JPG, PNG, TIFF)
+- Adjustable confidence threshold
+- Interactive visualization of detected objects
+- Export results in CSV, JSON, Excel formats
+- Download annotated images
+- Detection of buildings, vehicles, trees, water bodies, and more
