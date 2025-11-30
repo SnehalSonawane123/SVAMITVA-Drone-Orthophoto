@@ -17,11 +17,12 @@ def load_model():
     try:
         import cv2
         from ultralytics import YOLO
+        import os
+        os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
         model = YOLO('yolov8n.pt')
         return model, cv2
     except Exception as e:
-        st.error(f"Model loading failed: {str(e)}")
-        return None, None
+        return None, str(e)
 def detect_objects(image, model, cv2, confidence):
     img_array = np.array(image)
     if len(img_array.shape) == 2:
@@ -37,13 +38,14 @@ def detect_objects(image, model, cv2, confidence):
     trees = 0
     roads = 0
     water = 0
+    people = 0
     class_names = results[0].names
     for box in detections:
         cls = int(box.cls[0])
         class_name = class_names[cls].lower()
-        if 'building' in class_name or 'house' in class_name:
-            buildings += 1
-        elif any(x in class_name for x in ['car', 'truck', 'bus', 'vehicle']):
+        if any(x in class_name for x in ['person', 'people']):
+            people += 1
+        elif any(x in class_name for x in ['car', 'truck', 'bus', 'motorcycle', 'bicycle']):
             vehicles += 1
         elif any(x in class_name for x in ['tree', 'plant', 'potted']):
             trees += 1
@@ -59,6 +61,7 @@ def detect_objects(image, model, cv2, confidence):
         'trees': trees,
         'roads': roads,
         'water': water,
+        'people': people,
         'detections': detections,
         'class_names': class_names
     }
@@ -91,33 +94,39 @@ with tab1:
         with col2:
             use_gpu = st.checkbox("Use GPU", value=False)
         if st.button("🚀 Detect Objects", type="primary", use_container_width=True):
-            model, cv2 = load_model()
-            if model is None or cv2 is None:
-                st.error("Model loading failed. Please check logs.")
+            result = load_model()
+            if result[0] is None:
+                st.error(f"Model loading failed: {result[1]}")
+                st.info("Please ensure packages.txt file exists with libgl1 and libglib2.0-0")
             else:
+                model, cv2 = result
                 with st.spinner("🔄 Detecting objects..."):
                     progress_bar = st.progress(0)
                     for i in range(100):
                         time.sleep(0.01)
                         progress_bar.progress(i + 1)
-                    annotated_img, results = detect_objects(image, model, cv2, confidence_threshold)
-                    st.session_state.annotated_image = annotated_img
-                    st.session_state.results = results
-                    st.session_state.processed = True
-                    st.success(f"✅ Detected {results['total_objects']} objects!")
-                    st.balloons()
+                    try:
+                        annotated_img, results = detect_objects(image, model, cv2, confidence_threshold)
+                        st.session_state.annotated_image = annotated_img
+                        st.session_state.results = results
+                        st.session_state.processed = True
+                        st.success(f"✅ Detected {results['total_objects']} objects!")
+                        st.balloons()
+                    except Exception as e:
+                        st.error(f"Detection failed: {str(e)}")
 with tab2:
     st.header("📊 Detection Results")
     if not st.session_state.processed:
         st.warning("⚠️ Please upload and process an image first")
     else:
         results = st.session_state.results
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("Total Objects", results['total_objects'])
-        col2.metric("Buildings", results['buildings'])
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
+        col1.metric("Total", results['total_objects'])
+        col2.metric("People", results['people'])
         col3.metric("Vehicles", results['vehicles'])
-        col4.metric("Trees", results['trees'])
-        col5.metric("Water Bodies", results['water'])
+        col4.metric("Buildings", results['buildings'])
+        col5.metric("Trees", results['trees'])
+        col6.metric("Water", results['water'])
         st.divider()
         col1, col2 = st.columns(2)
         with col1:
